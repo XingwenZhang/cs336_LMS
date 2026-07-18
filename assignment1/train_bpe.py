@@ -35,78 +35,29 @@ def train_bpe(input_path : str,
 
     return vocabs, merges
 
-
-# def merge(seqs: list[tuple[bytes, ...]], available_size: int, index: int, vocabs: dict[int, bytes]):
-
-#     merges = []
-    
-#     for _ in range(available_size):
-#         pair_count = Counter() 
-#         for seq in seqs: 
-#             for i in range(len(seq) - 1):
-#                 pair = (seq[i], seq[i+1])
-#                 pair_count[pair] += 1
-
-#         if not pair_count:
-#             break 
-
-#         # Find the most appear pair, if tie, find the bigger one 
-#         best_pair = max(pair_count, key=lambda pair: (pair_count[pair], pair))
-
-#         # Replace the existing seqs 
-        
-
-#         left, right = best_pair
-#         merged_token = left + right
-        
-#         merges.append(best_pair)
-#         vocabs[index] = merged_token
-#         index += 1
-#         new_sequences = []
-
-#         for seq in seqs:
-#             new_sequence = []
-#             i = 0
-
-#             while i < len(seq):
-#                 if ( i < len(seq) - 1 and seq[i] == left and seq[i + 1] == right ):
-#                     new_sequence.append(merged_token)
-#                     i += 2
-#                 else:
-#                     new_sequence.append(seq[i])
-#                     i += 1
-
-#             new_sequences.append(tuple(new_sequence))
-            
-#         seqs = new_sequences
-    
-#     return merges
+def init_pair_count(seqs_counter: Counter[list[tuple[bytes, ...]]]): 
+    pair_count = Counter() 
+    for seq, freq in seqs_counter.items():
+            for pair in pairwise(seq):
+                pair_count[pair] += freq 
+    return pair_count
 
 def merge(seqs: list[tuple[bytes, ...]], available_size: int, index: int, vocabs: dict[int, bytes]):
 
     merges = []
 
     seqs_counter = Counter(seqs)
-    
-    for _ in range(available_size):
-        pair_count = Counter() 
-        # for seq in seqs: 
-        #     for i in range(len(seq) - 1):
-        #         pair = (seq[i], seq[i+1])
-        #         pair_count[pair] += 1
-        for seq, freq in seqs_counter.items():
-            for pair in pairwise(seq):
-                pair_count[pair] += freq 
+    pair_count = init_pair_count(seqs_counter)
 
+    for _ in range(available_size):
+        
         if not pair_count:
-            break 
+            break
 
         # Find the most appear pair, if tie, find the bigger one 
         best_pair, _ = max(pair_count.items(), key=lambda item: (item[1], item[0]))
 
         # Replace the existing seqs 
-        
-
         left, right = best_pair
         merged_token = left + right
         
@@ -118,23 +69,31 @@ def merge(seqs: list[tuple[bytes, ...]], available_size: int, index: int, vocabs
         for seq, freq in seqs_counter.items():
             n = len(seq)
             i = 0
-            new_seq = None
+            buffer = None
 
             while i < n:
                 if i + 1 < n and seq[i] == left and seq[i + 1] == right:
-                    if new_seq is None:
-                        new_seq = list(seq[:i])
-                    new_seq.append(merged_token)
+                    if buffer is None:
+                        buffer = list(seq[:i])
+                    buffer.append(merged_token)
                     i += 2
                 else:
-                    if new_seq is not None:
-                        new_seq.append(seq[i])
+                    if buffer is not None:
+                        buffer.append(seq[i])
                     i += 1
 
-            if new_seq is None:
+            if buffer is None:
                 new_sequences_counter[seq] += freq
             else:
-                new_sequences_counter[tuple(new_seq)] += freq
+                new_seq = tuple(buffer)
+                new_sequences_counter[new_seq] += freq
+
+                for pair in pairwise(new_seq):
+                    pair_count[pair] += freq
+                for pair in pairwise(seq):
+                    pair_count[pair] -= freq 
+                    if pair_count[pair] <= 0:
+                        del pair_count[pair]
 
         seqs_counter = new_sequences_counter
     
