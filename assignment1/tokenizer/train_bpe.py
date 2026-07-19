@@ -1,7 +1,9 @@
 from itertools import pairwise
 import regex as re
 from collections import Counter
-PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
+from cs336_basics.common.constants import PAT, ENCODE_FORMAT
+
+
 def train_bpe(input_path : str, 
               vocab_size: int, 
               special_tokens: list[str]) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]: 
@@ -13,7 +15,6 @@ def train_bpe(input_path : str,
     
     # Return 
     # vocab:dict[tokenId, bytes]; merges:list[tuple[bytes, bytes]]
-    ENCODE_FORMAT = 'utf-8'
 
     with open(input_path, 'r', encoding='utf-8') as file: 
         content = file.read() 
@@ -50,7 +51,7 @@ def merge(seqs: list[tuple[bytes, ...]], available_size: int, index: int, vocabs
     pair_count = init_pair_count(seqs_counter)
 
     for _ in range(available_size):
-        
+
         if not pair_count:
             break
 
