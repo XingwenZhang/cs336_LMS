@@ -1,10 +1,11 @@
 from cs336_basics.tokenizer.train_bpe import split_keep_special
-from cs336_basics.common.constants import ENCODE_FORMAT
+from cs336_basics.common.constants import ENCODE_FORMAT, PAT
 
 from itertools import pairwise
 from typing import Iterable, Iterator
 
 import json
+import regex as re
 
 class Tokenizer:
 
@@ -47,9 +48,11 @@ class Tokenizer:
             if is_special:
                 encoded_seqs.append(self.token_to_id.get(piece.encode(ENCODE_FORMAT)))
             else:
-                # Normal seqs needs to encode by the order of merge
-                encoded_tokens = self._encode_with_rank(piece)
-                encoded_seqs.extend(self.token_to_id.get(token) for token in encoded_tokens)
+                 for m in re.finditer(PAT, piece):
+                    pretoken = m.group()
+                    # Normal seqs needs to encode by the order of merge
+                    encoded_tokens = self._encode_with_rank(pretoken)
+                    encoded_seqs.extend(self.token_to_id.get(token) for token in encoded_tokens)
 
         return encoded_seqs
     
@@ -65,18 +68,19 @@ class Tokenizer:
                     yield from (self.token_to_id.get(token) for token in encoded_tokens)
     
     def decode(self, ids: list[int]) -> str:
-        decode_tokens = [self.vocba.get(id) for id in ids]
+        decode_tokens = [self.vocab.get(id) for id in ids]
         text_bytes = b''.join(decode_tokens)
 
         return text_bytes.decode(ENCODE_FORMAT, errors='replace')
     
-    def _encode_with_rank(self, piece: str):
-        encoded_tokens = piece.encode(ENCODE_FORMAT)
-        while len(encoded_tokens) > 2: 
+    def _encode_with_rank(self, piece: str) -> list[bytes]:
+        raw_bytes = piece.encode(ENCODE_FORMAT)
+        encoded_tokens = [bytes([b]) for b in raw_bytes]
+        while len(encoded_tokens) >= 2: 
             # for pair in pairwise(encoded_text):
             pairs = set(pairwise(encoded_tokens))
 
-            best_pair = min(pairs, lambda p : self.merges_with_rank.get(p, float('inf')))
+            best_pair = min(pairs, key=lambda p : self.merges_with_rank.get(p, float('inf')))
             if best_pair not in self.merges_with_rank:
                 break
             new_tokens = [] 
@@ -90,9 +94,6 @@ class Tokenizer:
                     i += 1 
             encoded_tokens = new_tokens
         return encoded_tokens
-
-
-
 
 
     def _append_vocab(self, vocab: dict[int, bytes], special_tokens: list[str]):
