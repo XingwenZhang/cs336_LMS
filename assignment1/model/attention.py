@@ -12,8 +12,6 @@ def scaled_dot_product_attention(query: torch.Tensor, key: torch.Tensor, value: 
     # mask: (..., query_length, key_length)
 
     d_k = query.size(-1)
-    query_len = query.size(-2)
-    key_len = key.size(-2)
     attention_score = einsum('...ij, ...kj -> ...ik', query, key)/math.sqrt(d_k)
     if mask is not None:
         masked_score = attention_score.masked_fill(~mask, float('-inf'))
