@@ -1,5 +1,6 @@
 import torch as torch
 import torch.nn as nn
+from cs336_basics.model.linear import Linear
 
 
 class SWIGlu(nn.Module):
@@ -7,9 +8,9 @@ class SWIGlu(nn.Module):
         super().__init__()
         factory_kwargs = {'device': device, 'dtype': dtype}
         self.d_ff = d_ff if d_ff is not None else self._up_project(d_model)
-        self.weights1 = nn.Parameter(torch.ones(self.d_ff, d_model, **factory_kwargs))
-        self.weights2 = nn.Parameter(torch.ones(d_model, self.d_ff, **factory_kwargs))
-        self.weights3 = nn.Parameter(torch.ones(self.d_ff, d_model, **factory_kwargs))
+        self.w1= Linear(d_model, self.d_ff, **factory_kwargs)
+        self.w2 = Linear(self.d_ff, d_model, **factory_kwargs)
+        self.w3 = Linear(d_model, self.d_ff, **factory_kwargs)
 
     def _up_project(self, d_model, multi_of: int = 64) -> int:
         dim = int(8 * d_model / 3)
@@ -20,11 +21,11 @@ class SWIGlu(nn.Module):
     def silu(self, x : torch.Tensor) -> torch.Tensor: 
         return x * torch.sigmoid(x)
     
-    def forward(self, x: torch.Tensor) -> torch.Tensor:  # x (d_model, )
-        part1 = torch.einsum('ij, ...j -> ...i', self.weights1, x)
-        part3 = torch.einsum('ij, ...j -> ...i', self.weights3, x)
-        part2 = torch.einsum('ji, ...i -> ...j', self.weights2, self.silu(part1) * part3)
-        return part2
+    def forward(self, x: torch.Tensor) -> torch.Tensor:  # x (batch, sequence, d_model)
+        gate = self.w1(x)
+        up = self.w3(x)
+
+        return self.w2(self.silu(gate) * up)
 
         
 

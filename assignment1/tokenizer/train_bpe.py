@@ -111,7 +111,7 @@ def pre_tokenize_content(content: str, special_tokens: list[str]):
 
         for m in re.finditer(PAT, piece):
             pretoken = m.group()
-            byte_seq = tuple(bytes([b]) for b in pretoken.encode("utf-8"))
+            byte_seq = tuple(bytes([b]) for b in pretoken.encode(ENCODE_FORMAT))
             normal_sequences.append(byte_seq)
 
     return normal_sequences
@@ -140,14 +140,5 @@ def split_keep_special(content: str, special_tokens: list[str]):
 
     if last < len(content):
         yield False, content[last:]            # tail ordinary text
-     
-
-            
-
-            
-
-
-        
-
 
     

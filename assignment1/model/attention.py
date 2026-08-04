@@ -17,8 +17,8 @@ def scaled_dot_product_attention(query: torch.Tensor, key: torch.Tensor, value: 
         masked_score = attention_score.masked_fill(~mask, float('-inf'))
     else:
         masked_score = attention_score
-    attention_weights = softmax(masked_score, -1)
-    attention = einsum('...ik, ...kj -> ...ij', attention_weights, value)
+    attention_weight = softmax(masked_score, -1)
+    attention = einsum('...ik, ...kj -> ...ij', attention_weight, value)
     return attention
 
 class MultiHeadSelfAttention(torch.nn.Module):
@@ -35,7 +35,7 @@ class MultiHeadSelfAttention(torch.nn.Module):
         self.q_proj = Linear(d_model, d_model, **factory_kwargs)
         self.k_proj = Linear(d_model, d_model, **factory_kwargs)
         self.v_proj = Linear(d_model, d_model, **factory_kwargs) 
-        self.o_proj = Linear(d_model, d_model, **factory_kwargs)
+        self.output_proj = Linear(d_model, d_model, **factory_kwargs)
         if self.theta is not None: 
             self.rope = RoPE(self.theta, self.d_k, self.max_seq_len)
     
@@ -67,7 +67,7 @@ class MultiHeadSelfAttention(torch.nn.Module):
 
         attention = attention.transpose(-3, -2).flatten(-2, -1)  #(batch, seq, d_model)
 
-        output = self.o_proj(attention)
+        output = self.output_proj(attention)
 
         assert output.shape == x.shape 
 
