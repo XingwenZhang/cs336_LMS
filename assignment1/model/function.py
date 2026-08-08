@@ -19,6 +19,7 @@ def cross_entropy(logits: torch.Tensor, target: torch.Tensor):
     log_probs = logits - max_logits - log_sum_exp 
 
     n = logits.size(0) 
+    # TODO: optimize the range(n) with torch operator
     selected_log_probs = log_probs[range(n), target]
 
     return -selected_log_probs.mean()
