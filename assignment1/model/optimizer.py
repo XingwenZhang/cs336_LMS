@@ -71,3 +71,16 @@ class AdamW(torch.optim.Optimizer):
         return loss 
 
 
+def learning_rate_schedule(t: int, lr_max: float, lr_min: float, warm_up_step: int, cos_step: int):
+    if lr_max < lr_min:
+        raise ValueError(f"lr_max should be bigger than lr_min {lr_max}:{lr_min}")
+    if cos_step < warm_up_step:
+        raise ValueError(f"cos_step should be bigger than warm_up_step {cos_step}:{warm_up_step}")
+
+    if t < warm_up_step:
+        return t * lr_max / warm_up_step 
+    if warm_up_step <= t <= cos_step:
+        return lr_min + 0.5 * (1 + math.cos(math.pi * (t - warm_up_step) / (cos_step - warm_up_step))) * (lr_max - lr_min)
+    else:
+        return lr_min
+    
